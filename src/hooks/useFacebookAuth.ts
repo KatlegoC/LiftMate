@@ -93,21 +93,39 @@ export const useFacebookAuth = (appId: string): UseFacebookAuthReturn => {
   const login = async (): Promise<void> => {
     return new Promise((resolve, reject) => {
       if (!window.FB) {
-        reject(new Error('Facebook SDK not loaded'));
+        reject(new Error('Facebook SDK not loaded. Please refresh the page.'));
         return;
       }
       
       window.FB.login((response: any) => {
+        console.log('Facebook login response:', response);
+        
         if (response.authResponse) {
           setIsAuthenticated(true);
           window.FB.api('/me', { fields: 'id,name,email,picture' }, (userResponse: FacebookUser | { error?: any }) => {
             if (userResponse && !('error' in userResponse)) {
               setUser(userResponse as FacebookUser);
+            } else {
+              console.error('Error fetching user info:', userResponse);
             }
           });
           resolve();
         } else {
-          reject(new Error('User cancelled login or did not fully authorize.'));
+          // Check for specific error reasons
+          if (response.error) {
+            const errorCode = response.error.code;
+            const errorMessage = response.error.message;
+            
+            if (errorCode === 200) {
+              reject(new Error('App not configured. Please check Facebook App settings.'));
+            } else if (errorCode === 190) {
+              reject(new Error('Invalid OAuth access token. Please try again.'));
+            } else {
+              reject(new Error(`Facebook login error: ${errorMessage} (Code: ${errorCode})`));
+            }
+          } else {
+            reject(new Error('User cancelled login or did not fully authorize.'));
+          }
         }
       }, { scope: 'email,public_profile' });
     });

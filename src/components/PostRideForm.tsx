@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, Clock, Users, DollarSign, Car, FileText, MessageSquare, Facebook, LogOut } from 'lucide-react';
-import { useFacebookAuth } from '../hooks/useFacebookAuth';
+import { X, MapPin, Calendar, Clock, Users, DollarSign, Car, FileText, MessageSquare } from 'lucide-react';
 
 interface PostRideFormProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-// Facebook App ID - Replace with your actual App ID from https://developers.facebook.com/
-// For development, you can use a test app ID or set it via environment variable
-const FACEBOOK_APP_ID: string = (import.meta.env.VITE_FACEBOOK_APP_ID as string) || 'YOUR_FACEBOOK_APP_ID';
-
 export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) => {
-  const { isAuthenticated, user, isLoading, login, logout } = useFacebookAuth(FACEBOOK_APP_ID);
   const [postType, setPostType] = useState<'passengers' | 'parcel' | null>(null);
   const [formData, setFormData] = useState({
     pickupLocation: '',
@@ -34,15 +28,6 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
   }, [isOpen]);
 
   if (!isOpen) return null;
-
-  const handleFacebookLogin = async () => {
-    try {
-      await login();
-    } catch (error) {
-      alert('Facebook login failed. Please try again.');
-      console.error('Facebook login error:', error);
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -84,70 +69,8 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
           </div>
 
           {/* Content */}
-          {isLoading ? (
-            <div className="p-12 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading...</p>
-            </div>
-          ) : !isAuthenticated ? (
-            /* Facebook Login Screen */
-            <div className="p-8 text-center">
-              <div className="mb-6">
-                <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Facebook size={40} className="text-emerald-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  Connect with Facebook
-                </h3>
-                <p className="text-gray-600 mb-6">
-                  Please sign in with your Facebook account to post a ride. This helps us verify your identity and keep our community safe.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleFacebookLogin}
-                className="w-full bg-[#1877F2] text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-[#166FE5] transition-colors flex items-center justify-center gap-3 mb-4"
-              >
-                <Facebook size={24} />
-                Continue with Facebook
-              </button>
-              <p className="text-xs text-gray-500">
-                By continuing, you agree to LiftMate's Terms of Service and Privacy Policy
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="p-6 space-y-6">
-              {/* User Info Bar */}
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  {user?.picture?.data?.url ? (
-                    <img 
-                      src={user.picture.data.url} 
-                      alt={user.name} 
-                      className="w-10 h-10 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white font-semibold">
-                      {user?.name?.charAt(0) || 'U'}
-                    </div>
-                  )}
-                  <div>
-                    <p className="font-semibold text-gray-900">{user?.name}</p>
-                    <p className="text-sm text-gray-600">Ready to post your ride</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-2 text-sm"
-                  title="Logout"
-                >
-                  <LogOut size={16} />
-                  Logout
-                </button>
-              </div>
-
-              {/* Step 1: Post Type Selection */}
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            {/* Step 1: Post Type Selection */}
               {!postType && (
               <div className="space-y-4">
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">
@@ -375,8 +298,7 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
                 </div>
               </>
             )}
-            </form>
-          )}
+          </form>
         </div>
       </div>
     </div>
