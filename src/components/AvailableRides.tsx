@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { MapPin, Calendar, Clock, Users, Car, Search, Filter } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MapPin, Calendar, Clock, Users, Car, Search, Filter, Phone, MessageSquare } from 'lucide-react';
+import { supabase, RidePost } from '../lib/supabase';
 
 interface Ride {
   id: string;
@@ -12,103 +13,140 @@ interface Ride {
   pricePerSeat?: number;
   vehicle: string;
   driverName: string;
-  driverRating: number;
+  phoneNumber: string;
+  isWhatsApp: boolean;
   comments?: string;
+  selfieUrl?: string;
 }
 
-// Mock data for demonstration
-const mockRides: Ride[] = [
-  {
-    id: '1',
-    type: 'passengers',
-    pickupLocation: 'Johannesburg, Gauteng',
-    dropoffLocation: 'Cape Town, Western Cape',
-    departureDate: '2024-12-20',
-    departureTime: '08:00',
-    seatsAvailable: 3,
-    pricePerSeat: 350,
-    vehicle: 'Toyota Corolla 2020',
-    driverName: 'Thabo M.',
-    driverRating: 4.9,
-    comments: 'Comfortable ride with AC. Willing to make stops along the way.',
-  },
-  {
-    id: '2',
-    type: 'passengers',
-    pickupLocation: 'Durban, KwaZulu-Natal',
-    dropoffLocation: 'Johannesburg, Gauteng',
-    departureDate: '2024-12-18',
-    departureTime: '06:30',
-    seatsAvailable: 2,
-    pricePerSeat: 280,
-    vehicle: 'Honda Civic 2019',
-    driverName: 'Sarah K.',
-    driverRating: 4.8,
-    comments: 'Early departure. Non-smoking vehicle.',
-  },
-  {
-    id: '3',
-    type: 'passengers',
-    pickupLocation: 'Pretoria, Gauteng',
-    dropoffLocation: 'Bloemfontein, Free State',
-    departureDate: '2024-12-19',
-    departureTime: '14:00',
-    seatsAvailable: 4,
-    pricePerSeat: 200,
-    vehicle: 'VW Polo 2021',
-    driverName: 'John D.',
-    driverRating: 5.0,
-  },
-  {
-    id: '4',
-    type: 'parcel',
-    pickupLocation: 'Port Elizabeth, Eastern Cape',
-    dropoffLocation: 'East London, Eastern Cape',
-    departureDate: '2024-12-17',
-    departureTime: '10:00',
-    vehicle: 'Ford Ranger 2022',
-    driverName: 'Mike T.',
-    driverRating: 4.7,
-    comments: 'Secure parcel delivery. Tracking available.',
-  },
-  {
-    id: '5',
-    type: 'passengers',
-    pickupLocation: 'Cape Town, Western Cape',
-    dropoffLocation: 'Stellenbosch, Western Cape',
-    departureDate: '2024-12-21',
-    departureTime: '09:00',
-    seatsAvailable: 1,
-    pricePerSeat: 150,
-    vehicle: 'BMW 3 Series 2020',
-    driverName: 'Lisa W.',
-    driverRating: 4.9,
-    comments: 'Direct route, no stops.',
-  },
-];
+interface AvailableRidesProps {
+  refreshTrigger?: number;
+}
 
-export const AvailableRides: React.FC = () => {
+export const AvailableRides: React.FC<AvailableRidesProps> = ({ refreshTrigger }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'passengers' | 'parcel'>('all');
-  const [filteredRides, setFilteredRides] = useState<Ride[]>(mockRides);
+  const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [rides, setRides] = useState<Ride[]>([]);
+  const [filteredRides, setFilteredRides] = useState<Ride[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch rides from Supabase
+  useEffect(() => {
+    fetchRides();
+  }, [refreshTrigger]);
+
+  const fetchRides = async () => {
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('rides')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching rides:', error);
+        setError('Failed to load rides. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Transform Supabase data to Ride format
+      const transformedRides: Ride[] = (data || []).map((ride: RidePost) => ({
+        id: ride.id || '',
+        type: ride.post_type,
+        pickupLocation: ride.pickup_location,
+        dropoffLocation: ride.dropoff_location,
+        departureDate: ride.departure_date,
+        departureTime: ride.departure_time,
+        seatsAvailable: ride.seats_available,
+        pricePerSeat: ride.price_per_seat,
+        vehicle: ride.vehicle,
+        driverName: ride.driver_name,
+        phoneNumber: ride.phone_number,
+        isWhatsApp: ride.is_whatsapp,
+        comments: ride.comments,
+        selfieUrl: ride.selfie_url,
+      }));
+
+      setRides(transformedRides);
+      setFilteredRides(transformedRides);
+      setIsLoading(false);
+    } catch (err: any) {
+      console.error('Error:', err);
+      // Handle 503 errors (project paused)
+      if (err.message?.includes('503') || err.message?.includes('Service Unavailable') || err.message?.includes('upstream connect error')) {
+        setError('Supabase project may be paused. Please restore it in the Supabase dashboard (https://app.supabase.com/).');
+      } else {
+        setError(err.message || 'Failed to load rides. Please try again.');
+      }
+      setIsLoading(false);
+    }
+  };
+
+  // Extract city from location string (e.g., "Cape Town, Western Cape" -> "Cape Town")
+  const extractCity = (location: string): string => {
+    // Split by comma and take the first part, trim whitespace
+    const city = location.split(',')[0].trim();
+    return city;
+  };
+
+  // Get unique cities with trip counts
+  const getCityCounts = (): Array<{ city: string; count: number }> => {
+    const cityCounts: { [key: string]: number } = {};
+    
+    rides.forEach(ride => {
+      const pickupCity = extractCity(ride.pickupLocation);
+      const dropoffCity = extractCity(ride.dropoffLocation);
+      
+      // Count if city appears in pickup or dropoff
+      cityCounts[pickupCity] = (cityCounts[pickupCity] || 0) + 1;
+      if (pickupCity !== dropoffCity) {
+        cityCounts[dropoffCity] = (cityCounts[dropoffCity] || 0) + 1;
+      }
+    });
+    
+    // Convert to array and sort by count (descending)
+    return Object.entries(cityCounts)
+      .map(([city, count]) => ({ city, count }))
+      .sort((a, b) => b.count - a.count);
+  };
+
+  // Filter rides when search, filter, or city changes
+  useEffect(() => {
+    filterRides(searchQuery, filterType, selectedCity);
+  }, [searchQuery, filterType, selectedCity, rides]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value.toLowerCase();
     setSearchQuery(query);
-    filterRides(query, filterType);
   };
 
   const handleFilterChange = (type: 'all' | 'passengers' | 'parcel') => {
     setFilterType(type);
-    filterRides(searchQuery, type);
   };
 
-  const filterRides = (query: string, type: 'all' | 'passengers' | 'parcel') => {
-    let filtered = mockRides;
+  const handleCityClick = (city: string) => {
+    // Toggle city filter - if same city clicked, clear filter
+    setSelectedCity(selectedCity === city ? null : city);
+  };
+
+  const filterRides = (query: string, type: 'all' | 'passengers' | 'parcel', city: string | null) => {
+    let filtered = rides;
 
     // Filter by type
     if (type !== 'all') {
       filtered = filtered.filter(ride => ride.type === type);
+    }
+
+    // Filter by city
+    if (city) {
+      filtered = filtered.filter(
+        ride =>
+          extractCity(ride.pickupLocation).toLowerCase() === city.toLowerCase() ||
+          extractCity(ride.dropoffLocation).toLowerCase() === city.toLowerCase()
+      );
     }
 
     // Filter by search query
@@ -157,6 +195,33 @@ export const AvailableRides: React.FC = () => {
             />
           </div>
 
+          {/* Location Capsules */}
+          {!isLoading && rides.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {getCityCounts().map(({ city, count }) => (
+                <button
+                  key={city}
+                  onClick={() => handleCityClick(city)}
+                  className={`px-4 py-2 rounded-full font-semibold text-sm transition-colors flex items-center gap-2 ${
+                    selectedCity === city
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-emerald-50 text-emerald-700 border-2 border-emerald-200 hover:border-emerald-500 hover:bg-emerald-100'
+                  }`}
+                >
+                  <MapPin size={16} />
+                  {city}
+                  <span className={`px-2 py-0.5 rounded-full text-xs ${
+                    selectedCity === city
+                      ? 'bg-white/20 text-white'
+                      : 'bg-emerald-600 text-white'
+                  }`}>
+                    {count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Filter Buttons */}
           <div className="flex flex-wrap gap-3">
             <button
@@ -196,20 +261,49 @@ export const AvailableRides: React.FC = () => {
         </div>
 
         {/* Results Count */}
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <p className="text-gray-600">
             {filteredRides.length} {filteredRides.length === 1 ? 'ride' : 'rides'} available
           </p>
+          <button
+            onClick={fetchRides}
+            className="text-emerald-600 hover:text-emerald-700 font-semibold text-sm"
+          >
+            Refresh
+          </button>
         </div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="text-center py-12 bg-white rounded-xl border-2 border-gray-200">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading rides...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <div className="text-center py-12 bg-white rounded-xl border-2 border-red-200">
+            <p className="text-xl text-red-600 mb-2">Error loading rides</p>
+            <p className="text-gray-500 mb-4">{error}</p>
+            <button
+              onClick={fetchRides}
+              className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
         {/* Rides List */}
-        <div className="space-y-6">
-          {filteredRides.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-xl border-2 border-gray-200">
-              <p className="text-xl text-gray-600 mb-2">No rides found</p>
-              <p className="text-gray-500">Try adjusting your search or filters</p>
-            </div>
-          ) : (
+        {!isLoading && !error && (
+          <div className="space-y-6">
+            {filteredRides.length === 0 ? (
+              <div className="text-center py-12 bg-white rounded-xl border-2 border-gray-200">
+                <p className="text-xl text-gray-600 mb-2">No rides found</p>
+                <p className="text-gray-500">Try adjusting your search or filters</p>
+              </div>
+            ) : (
             filteredRides.map(ride => (
               <div
                 key={ride.id}
@@ -272,9 +366,29 @@ export const AvailableRides: React.FC = () => {
                         <span>{ride.vehicle}</span>
                       </div>
                       <div className="flex items-center gap-2">
+                        {ride.selfieUrl && (
+                          <img 
+                            src={ride.selfieUrl} 
+                            alt={ride.driverName}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        )}
                         <span className="font-semibold">{ride.driverName}</span>
-                        <span className="text-emerald-600">★ {ride.driverRating}</span>
                       </div>
+                    </div>
+
+                    {/* Phone Number and WhatsApp */}
+                    <div className="flex items-center gap-3 mt-3">
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <Phone size={16} className="text-emerald-600" />
+                        <span className="font-medium">{ride.phoneNumber}</span>
+                      </div>
+                      {ride.isWhatsApp && (
+                        <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                          <MessageSquare size={12} />
+                          WhatsApp
+                        </div>
+                      )}
                     </div>
 
                     {/* Comments */}
@@ -311,15 +425,31 @@ export const AvailableRides: React.FC = () => {
                         </div>
                       </div>
                     )}
-                    <button className="w-full bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors">
-                      Contact Driver
-                    </button>
+                    <a
+                      href={ride.isWhatsApp ? `https://wa.me/${ride.phoneNumber.replace(/[^0-9]/g, '')}` : `tel:${ride.phoneNumber}`}
+                      target={ride.isWhatsApp ? "_blank" : "_self"}
+                      rel={ride.isWhatsApp ? "noopener noreferrer" : undefined}
+                      className="w-full bg-emerald-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-emerald-700 transition-colors text-center flex items-center justify-center gap-2"
+                    >
+                      {ride.isWhatsApp ? (
+                        <>
+                          <MessageSquare size={18} />
+                          WhatsApp Driver
+                        </>
+                      ) : (
+                        <>
+                          <Phone size={18} />
+                          Call Driver
+                        </>
+                      )}
+                    </a>
                   </div>
                 </div>
               </div>
             ))
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </section>
   );

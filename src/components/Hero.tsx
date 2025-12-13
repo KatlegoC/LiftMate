@@ -28,12 +28,15 @@ export const Hero: React.FC<HeroProps> = ({ onPostRide, onFindRide }) => {
           {/* Left Content */}
           <div className="text-center lg:text-left">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white lg:text-gray-900 mb-6 drop-shadow-lg">
-              Connect. Travel. Deliver.
+              Connect. Travel. Together.
               <span className="text-emerald-400 lg:text-emerald-600 block mt-2 drop-shadow-lg">Across South Africa</span>
+              <span className="text-2xl md:text-3xl lg:text-4xl font-normal text-white/80 lg:text-gray-500 block mt-2 drop-shadow-md">No Fees. No Hassle.</span>
             </h1>
-            <p className="text-xl text-white lg:text-gray-600 mb-8 drop-shadow-md">
-              Join thousands of drivers and riders sharing journeys and delivering packages 
-              safely and affordably across provinces.
+            <p className="text-xl text-white lg:text-gray-600 mb-4 drop-shadow-md">
+              Join a free community of drivers and riders sharing journeys safely across provinces.
+            </p>
+            <p className="text-lg text-white/90 lg:text-gray-600 mb-8 drop-shadow-md">
+              Post a ride or find one instantly. No commissions. No subscriptions. Totally free.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
               <button 
@@ -54,25 +57,22 @@ export const Hero: React.FC<HeroProps> = ({ onPostRide, onFindRide }) => {
             {/* Stats */}
             <div className="mt-12 grid grid-cols-3 gap-6">
               <div className="text-center lg:text-left">
-                <div className="flex items-center justify-center lg:justify-start gap-2 text-emerald-400 lg:text-emerald-600 mb-2 drop-shadow-md">
-                  <Users size={24} />
-                  <span className="text-3xl font-bold">5,000+</span>
+                <div className="flex items-center justify-center lg:justify-start gap-3 text-emerald-400 lg:text-emerald-600 mb-2 drop-shadow-md">
+                  <Users size={32} />
                 </div>
-                <p className="text-white lg:text-gray-600 text-sm drop-shadow-sm">Active Users</p>
+                <p className="text-white lg:text-gray-600 text-sm font-semibold drop-shadow-sm">Community Verified</p>
               </div>
               <div className="text-center lg:text-left">
-                <div className="flex items-center justify-center lg:justify-start gap-2 text-emerald-400 lg:text-emerald-600 mb-2 drop-shadow-md">
-                  <MapPin size={24} />
-                  <span className="text-3xl font-bold">15,000+</span>
+                <div className="flex items-center justify-center lg:justify-start gap-3 text-emerald-400 lg:text-emerald-600 mb-2 drop-shadow-md">
+                  <MapPin size={32} />
                 </div>
-                <p className="text-white lg:text-gray-600 text-sm drop-shadow-sm">Trips Completed</p>
+                <p className="text-white lg:text-gray-600 text-sm font-semibold drop-shadow-sm">Local Routes</p>
               </div>
               <div className="text-center lg:text-left">
-                <div className="flex items-center justify-center lg:justify-start gap-2 text-emerald-400 lg:text-emerald-600 mb-2 drop-shadow-md">
-                  <Star size={24} />
-                  <span className="text-3xl font-bold">4.8★</span>
+                <div className="flex items-center justify-center lg:justify-start gap-3 text-emerald-400 lg:text-emerald-600 mb-2 drop-shadow-md">
+                  <Star size={32} />
                 </div>
-                <p className="text-white lg:text-gray-600 text-sm drop-shadow-sm">Average Rating</p>
+                <p className="text-white lg:text-gray-600 text-sm font-semibold drop-shadow-sm">Safe & Reliable</p>
               </div>
             </div>
           </div>

@@ -4,7 +4,7 @@ import Hero from './components/Hero';
 import Features from './components/Features';
 import HowItWorks from './components/HowItWorks';
 import Safety from './components/Safety';
-import Pricing from './components/Pricing';
+// import Pricing from './components/Pricing';
 import CTA from './components/CTA';
 import Footer from './components/Footer';
 import PostRideForm from './components/PostRideForm';
@@ -12,12 +12,18 @@ import AvailableRides from './components/AvailableRides';
 
 function App() {
   const [isPostRideFormOpen, setIsPostRideFormOpen] = useState(false);
+  const [refreshRides, setRefreshRides] = useState(0);
 
   const scrollToFindRide = () => {
     const element = document.getElementById('find-ride');
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  const handleRidePosted = () => {
+    setIsPostRideFormOpen(false);
+    setRefreshRides(prev => prev + 1); // Trigger refresh
   };
 
   return (
@@ -28,11 +34,11 @@ function App() {
           onPostRide={() => setIsPostRideFormOpen(true)}
           onFindRide={scrollToFindRide}
         />
-        <AvailableRides />
+        <AvailableRides refreshTrigger={refreshRides} />
         <Features />
         <HowItWorks />
         <Safety />
-        <Pricing />
+        {/* <Pricing /> */}
         <CTA 
           onPostRide={() => setIsPostRideFormOpen(true)}
           onFindRide={scrollToFindRide}
@@ -41,7 +47,7 @@ function App() {
       <Footer />
       <PostRideForm 
         isOpen={isPostRideFormOpen} 
-        onClose={() => setIsPostRideFormOpen(false)} 
+        onClose={handleRidePosted}
       />
     </div>
   );

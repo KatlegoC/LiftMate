@@ -17,28 +17,28 @@ interface Feature {
 const features: Feature[] = [
   {
     icon: <ShieldCheck size={32} />,
-    title: 'Verified Drivers',
-    description: 'All drivers undergo background checks and verification to ensure your safety.',
+    title: 'Community Verified',
+    description: 'All drivers are verified by our community to ensure safe and reliable journeys.',
   },
   {
     icon: <DollarSign size={32} />,
-    title: 'Affordable Travel',
-    description: 'Share costs with fellow travelers and save up to 70% compared to solo trips.',
+    title: 'Free & Hassle-Free',
+    description: 'No hidden fees, no complicated processes. Post or find rides completely free.',
   },
   {
     icon: <Star size={32} />,
-    title: 'Community Ratings',
-    description: 'Rate and review drivers and riders to build a trusted community.',
+    title: 'Safe & Reliable',
+    description: 'Trusted community with verified profiles and ratings for peace of mind.',
   },
   {
     icon: <MessageSquare size={32} />,
-    title: 'In-App Messaging',
-    description: 'Communicate directly with drivers and riders before your journey.',
+    title: 'Local Routes',
+    description: 'Connect with drivers and riders on routes across South Africa.',
   },
   {
     icon: <Package size={32} />,
-    title: 'Premium Packages',
-    description: 'Send and receive packages safely with our verified delivery network.',
+    title: 'Package Delivery',
+    description: 'Send and receive packages safely through our verified delivery network.',
   },
   {
     icon: <Calendar size={32} />,
@@ -56,7 +56,7 @@ export const Features: React.FC = () => {
             Why Choose LiftMate?
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Everything you need for safe, affordable, and convenient travel across South Africa.
+            Free, hassle-free, and safe travel across South Africa. Community verified and reliable.
           </p>
         </div>
 

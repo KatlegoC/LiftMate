@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, MapPin, Calendar, Clock, Users, DollarSign, Car, FileText, MessageSquare, Camera, CheckCircle } from 'lucide-react';
+import { X, MapPin, Calendar, Clock, Users, DollarSign, Car, FileText, MessageSquare, Camera, CheckCircle, Phone } from 'lucide-react';
+import { supabase, RidePost } from '../lib/supabase';
 
 interface PostRideFormProps {
   isOpen: boolean;
@@ -10,6 +11,8 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
   const [postType, setPostType] = useState<'passengers' | 'parcel' | null>(null);
   const [formData, setFormData] = useState({
     name: '',
+    phoneNumber: '',
+    isWhatsApp: false,
     pickupLocation: '',
     dropoffLocation: '',
     departureDate: '',
@@ -23,6 +26,7 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
   const [selfie, setSelfie] = useState<string | null>(null);
   const [isHumanVerified, setIsHumanVerified] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -104,8 +108,10 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
     setIsHumanVerified(!isHumanVerified);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isSubmitting) return; // Prevent double submission
     
     if (!formData.name.trim()) {
       alert('Please enter your name');
@@ -121,18 +127,134 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
       alert('Please verify that you are human');
       return;
     }
+
+    setIsSubmitting(true);
+
+    // Upload selfie to Supabase storage
+    let selfieUrl = null;
+    if (selfie) {
+      try {
+        // Convert base64 data URL to blob
+        const response = await fetch(selfie);
+        const blob = await response.blob();
+        
+        // Generate unique filename
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+        
+        // Upload to Supabase storage
+        const { error: uploadError } = await supabase.storage
+          .from('selfies')
+          .upload(fileName, blob, {
+            contentType: 'image/jpeg',
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Error uploading selfie to storage:', uploadError);
+          // If storage bucket doesn't exist or other storage errors, store as base64
+          if (uploadError.message?.includes('Bucket not found') || uploadError.message?.includes('400')) {
+            console.warn('Storage bucket "selfies" not found. Storing selfie as base64 in database. Create the bucket in Supabase Storage if you want to use storage.');
+          } else if (uploadError.message?.includes('Failed to fetch') || uploadError.message?.includes('network')) {
+            console.warn('Network error uploading selfie, storing as base64 in database');
+          }
+          selfieUrl = selfie;
+        } else {
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('selfies')
+            .getPublicUrl(fileName);
+          selfieUrl = urlData.publicUrl;
+        }
+      } catch (error) {
+        console.error('Error processing selfie:', error);
+        // Fallback: store as base64 in database
+        selfieUrl = selfie;
+      }
+    }
     
-    // Handle form submission here
-    const { name, ...restFormData } = formData;
-    console.log('Form submitted:', { 
-      postType, 
-      driverName: name,
-      selfie: selfie.substring(0, 50) + '...', // Log preview only
-      humanVerified: isHumanVerified,
-      ...restFormData 
-    });
-    alert('Ride posted successfully!');
-    onClose();
+        // Prepare ride data for Supabase
+        const rideData: RidePost = {
+          driver_name: formData.name,
+          phone_number: formData.phoneNumber,
+          is_whatsapp: formData.isWhatsApp,
+          selfie_url: selfieUrl || undefined,
+          post_type: postType!,
+          pickup_location: formData.pickupLocation,
+          dropoff_location: formData.dropoffLocation,
+          departure_date: formData.departureDate,
+          departure_time: formData.departureTime,
+          vehicle: formData.vehicle,
+          vehicle_registration: formData.vehicleRegistration,
+          comments: formData.comments || undefined,
+        };
+
+    // Add passenger-specific fields
+    if (postType === 'passengers') {
+      rideData.seats_available = parseInt(formData.seatsAvailable) || undefined;
+      rideData.price_per_seat = parseFloat(formData.pricePerSeat) || undefined;
+    }
+
+    // Save to Supabase
+    try {
+      console.log('Submitting ride data:', rideData);
+      
+      const { data, error } = await supabase
+        .from('rides')
+        .insert([rideData])
+        .select();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        
+        // More specific error messages
+        if (error.message?.includes('503') || error.message?.includes('Service Unavailable') || error.message?.includes('upstream connect error') || error.message?.includes('delayed connect error')) {
+          alert('Supabase connection error (503):\n\nThe Supabase project may be:\n1. Paused (free tier auto-pauses after 7 days)\n2. Temporarily unavailable\n3. Being restored\n\nPlease:\n1. Go to https://app.supabase.com/\n2. Check if project is paused → Click "Restore"\n3. Wait 2-3 minutes for it to become active\n4. Try again');
+        } else if (error.message?.includes('Failed to fetch') || error.message?.includes('network') || error.message?.includes('ERR_NAME_NOT_RESOLVED')) {
+          alert('Network error: Cannot connect to Supabase.\n\nPossible causes:\n1. No internet connection\n2. Supabase project is paused\n3. DNS/network issue\n\nPlease check:\n- Your internet connection\n- Supabase dashboard (make sure project is active)\n- Try refreshing the page');
+        } else if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+          alert('Database table "rides" not found.\n\nPlease create it in Supabase:\n1. Go to SQL Editor\n2. Run the SQL from SUPABASE_SETUP.md\n3. Create the "rides" table');
+        } else if (error.code === '42501' || error.message?.includes('permission')) {
+          alert('Permission denied. Please check Row Level Security (RLS) policies in Supabase.\n\nMake sure you have INSERT policy enabled for the "rides" table.');
+        } else if (error.code === '23505') {
+          alert('This ride already exists. Please check your details.');
+        } else {
+          alert(`Failed to post ride: ${error.message || 'Unknown error'}\n\nError code: ${error.code || 'N/A'}\n\nCheck browser console (F12) for more details.`);
+        }
+        setIsSubmitting(false);
+        return;
+      }
+
+      console.log('Ride posted successfully:', data);
+      setIsSubmitting(false);
+      alert('Ride posted successfully!');
+      
+      // Reset form
+      setPostType(null);
+      setSelfie(null);
+      setIsHumanVerified(false);
+      setFormData({
+        name: '',
+        phoneNumber: '',
+        isWhatsApp: false,
+        pickupLocation: '',
+        dropoffLocation: '',
+        departureDate: '',
+        departureTime: '',
+        seatsAvailable: '',
+        pricePerSeat: '',
+        vehicle: '',
+        vehicleRegistration: '',
+        comments: '',
+      });
+      
+      onClose();
+    } catch (error: any) {
+      console.error('Unexpected error:', error);
+      console.error('Error stack:', error?.stack);
+      alert(`Failed to post ride: ${error?.message || 'Unknown error'}\n\nCheck browser console (F12) for more details.`);
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -221,6 +343,39 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                   />
+                </div>
+
+                {/* Phone Number Field */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                    <Phone size={16} className="text-emerald-600" />
+                    Phone Number *
+                  </label>
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleInputChange}
+                    placeholder="e.g., +27 82 123 4567 or 082 123 4567"
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                  />
+                </div>
+
+                {/* WhatsApp Checkbox */}
+                <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                  <input
+                    type="checkbox"
+                    id="isWhatsApp"
+                    name="isWhatsApp"
+                    checked={formData.isWhatsApp}
+                    onChange={(e) => setFormData(prev => ({ ...prev, isWhatsApp: e.target.checked }))}
+                    className="h-5 w-5 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="isWhatsApp" className="text-sm font-semibold text-gray-700 flex items-center gap-2 cursor-pointer">
+                    <MessageSquare size={18} className="text-emerald-600" />
+                    This number is on WhatsApp
+                  </label>
                 </div>
 
                 {/* Selfie Capture */}
@@ -496,9 +651,17 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors"
+                    disabled={isSubmitting}
+                    className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
-                    Post Ride
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        Posting...
+                      </>
+                    ) : (
+                      'Post Ride'
+                    )}
                   </button>
                 </div>
               </>

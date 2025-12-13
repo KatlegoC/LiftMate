@@ -1,27 +1,22 @@
 import React from 'react';
-import { Shield, CheckCircle, UserCheck, Phone, AlertCircle } from 'lucide-react';
+import { Shield, CheckCircle, UserCheck, Car, Camera } from 'lucide-react';
 import { ImageWithFallback } from './ImageWithFallback';
 
 const safetyFeatures = [
   {
-    icon: <Shield size={24} />,
-    title: 'Background Checks',
-    description: 'All drivers undergo comprehensive background verification.',
+    icon: <Camera size={24} />,
+    title: 'Identity Verification',
+    description: 'All users are required to submit a selfie verification, which we securely store to confirm identity and reduce impersonation.',
+  },
+  {
+    icon: <Car size={24} />,
+    title: 'Vehicle Details',
+    description: 'Drivers must provide vehicle information, including number plates, to ensure transparency and traceability for every trip.',
   },
   {
     icon: <UserCheck size={24} />,
     title: 'Verified Profiles',
-    description: 'ID verification ensures you know who you\'re traveling with.',
-  },
-  {
-    icon: <Phone size={24} />,
-    title: '24/7 Support',
-    description: 'Our support team is available around the clock for assistance.',
-  },
-  {
-    icon: <AlertCircle size={24} />,
-    title: 'Emergency Features',
-    description: 'Quick access to emergency contacts and trip sharing.',
+    description: 'Profile verification helps you know exactly who you\'re travelling with before the journey begins.',
   },
 ];
 
@@ -37,11 +32,10 @@ export const Safety: React.FC = () => {
               <span className="font-semibold">Safety First</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Your Safety is Our Priority
+              Safety First
             </h2>
             <p className="text-xl text-gray-600 mb-8">
-              We've built multiple layers of safety features to ensure every journey 
-              is secure and trustworthy.
+              We prioritise trust and safety on every journey by verifying drivers and riders before they connect.
             </p>
 
             <div className="space-y-6">
@@ -62,7 +56,7 @@ export const Safety: React.FC = () => {
 
             <div className="mt-8 flex items-center gap-2 text-emerald-600">
               <CheckCircle size={20} />
-              <span className="font-semibold">Trusted by 5,000+ users across South Africa</span>
+              <span className="font-semibold">Community Verified - Safe & Reliable - Free & Hassle-Free</span>
             </div>
           </div>
 
@@ -70,8 +64,8 @@ export const Safety: React.FC = () => {
           <div className="relative">
             <div className="rounded-2xl overflow-hidden shadow-2xl">
               <ImageWithFallback
-                src="https://images.unsplash.com/photo-1559028012-481c04fa702d?w=800&h=600&fit=crop"
-                alt="Safe travel and security"
+                src="/images/IMG_3015.JPG"
+                alt="South African transport hub"
                 className="w-full h-auto"
               />
             </div>
@@ -80,8 +74,8 @@ export const Safety: React.FC = () => {
               <div className="flex items-center gap-3">
                 <Shield size={32} />
                 <div>
-                  <div className="font-bold text-lg">Verified Platform</div>
-                  <div className="text-sm opacity-90">Safety certified</div>
+                  <div className="font-bold text-lg">Community Verified</div>
+                  <div className="text-sm opacity-90">Safe & Reliable</div>
                 </div>
               </div>
             </div>
