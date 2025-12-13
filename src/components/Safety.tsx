@@ -1,10 +1,9 @@
 import React from 'react';
-import { Shield, CheckCircle, UserCheck, Car, Camera } from 'lucide-react';
-import { ImageWithFallback } from './ImageWithFallback';
+import { Shield, UserCheck, Car, CheckCircle } from 'lucide-react';
 
 const safetyFeatures = [
   {
-    icon: <Camera size={24} />,
+    icon: <UserCheck size={24} />,
     title: 'Identity Verification',
     description: 'All users are required to submit a selfie verification, which we securely store to confirm identity and reduce impersonation.',
   },
@@ -14,7 +13,7 @@ const safetyFeatures = [
     description: 'Drivers must provide vehicle information, including number plates, to ensure transparency and traceability for every trip.',
   },
   {
-    icon: <UserCheck size={24} />,
+    icon: <CheckCircle size={24} />,
     title: 'Verified Profiles',
     description: 'Profile verification helps you know exactly who you\'re travelling with before the journey begins.',
   },
@@ -53,31 +52,16 @@ export const Safety: React.FC = () => {
                 </div>
               ))}
             </div>
-
-            <div className="mt-8 flex items-center gap-2 text-emerald-600">
-              <CheckCircle size={20} />
-              <span className="font-semibold">Community Verified - Safe & Reliable - Free & Hassle-Free</span>
-            </div>
           </div>
 
           {/* Right Image */}
           <div className="relative">
             <div className="rounded-2xl overflow-hidden shadow-2xl">
-              <ImageWithFallback
+              <img
                 src="/images/IMG_3015.JPG"
-                alt="South African transport hub"
+                alt="Safety and security"
                 className="w-full h-auto"
               />
-            </div>
-            {/* Decorative badge */}
-            <div className="absolute -bottom-6 -right-6 bg-emerald-600 text-white p-6 rounded-xl shadow-xl max-w-xs">
-              <div className="flex items-center gap-3">
-                <Shield size={32} />
-                <div>
-                  <div className="font-bold text-lg">Community Verified</div>
-                  <div className="text-sm opacity-90">Safe & Reliable</div>
-                </div>
-              </div>
             </div>
           </div>
         </div>

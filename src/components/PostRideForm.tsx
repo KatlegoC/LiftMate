@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, MapPin, Calendar, Clock, Users, DollarSign, Car, FileText, MessageSquare, Camera, CheckCircle, Phone } from 'lucide-react';
+import { X, MapPin, Calendar, Clock, Users, DollarSign, Car, FileText, MessageSquare, User, Phone, Camera } from 'lucide-react';
 import { supabase, RidePost } from '../lib/supabase';
 
 interface PostRideFormProps {
   isOpen: boolean;
   onClose: () => void;
+  rideType?: 'offer' | 'request'; // 'offer' = driver offering ride, 'request' = rider looking for ride
+  onSuccess?: () => void;
 }
 
-export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) => {
+export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose, rideType = 'offer', onSuccess }) => {
   const [postType, setPostType] = useState<'passengers' | 'parcel' | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -23,216 +25,17 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
     vehicleRegistration: '',
     comments: '',
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [selfie, setSelfie] = useState<string | null>(null);
   const [isHumanVerified, setIsHumanVerified] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
 
   // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
       setPostType(null);
-      setSelfie(null);
-      setIsHumanVerified(false);
-      setShowCamera(false);
-      stopCamera();
-    }
-  }, [isOpen]);
-
-  // Cleanup camera on unmount
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
-
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-  };
-
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' } 
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-      setShowCamera(true);
-    } catch (error) {
-      alert('Unable to access camera. Please allow camera permissions.');
-      console.error('Camera error:', error);
-    }
-  };
-
-  const captureSelfie = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
-      
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context?.drawImage(video, 0, 0);
-      
-      const imageData = canvas.toDataURL('image/jpeg');
-      setSelfie(imageData);
-      stopCamera();
-      setShowCamera(false);
-    }
-  };
-
-  const retakeSelfie = () => {
-    setSelfie(null);
-    startCamera();
-  };
-
-  if (!isOpen) return null;
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleHumanVerification = () => {
-    setIsHumanVerified(!isHumanVerified);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (isSubmitting) return; // Prevent double submission
-    
-    if (!formData.name.trim()) {
-      alert('Please enter your name');
-      return;
-    }
-    
-    if (!selfie) {
-      alert('Please take a selfie for verification');
-      return;
-    }
-    
-    if (!isHumanVerified) {
-      alert('Please verify that you are human');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    // Upload selfie to Supabase storage
-    let selfieUrl = null;
-    if (selfie) {
-      try {
-        // Convert base64 data URL to blob
-        const response = await fetch(selfie);
-        const blob = await response.blob();
-        
-        // Generate unique filename
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-        
-        // Upload to Supabase storage
-        const { error: uploadError } = await supabase.storage
-          .from('selfies')
-          .upload(fileName, blob, {
-            contentType: 'image/jpeg',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('Error uploading selfie to storage:', uploadError);
-          // If storage bucket doesn't exist or other storage errors, store as base64
-          if (uploadError.message?.includes('Bucket not found') || uploadError.message?.includes('400')) {
-            console.warn('Storage bucket "selfies" not found. Storing selfie as base64 in database. Create the bucket in Supabase Storage if you want to use storage.');
-          } else if (uploadError.message?.includes('Failed to fetch') || uploadError.message?.includes('network')) {
-            console.warn('Network error uploading selfie, storing as base64 in database');
-          }
-          selfieUrl = selfie;
-        } else {
-          // Get public URL
-          const { data: urlData } = supabase.storage
-            .from('selfies')
-            .getPublicUrl(fileName);
-          selfieUrl = urlData.publicUrl;
-        }
-      } catch (error) {
-        console.error('Error processing selfie:', error);
-        // Fallback: store as base64 in database
-        selfieUrl = selfie;
-      }
-    }
-    
-        // Prepare ride data for Supabase
-        const rideData: RidePost = {
-          driver_name: formData.name,
-          phone_number: formData.phoneNumber,
-          is_whatsapp: formData.isWhatsApp,
-          selfie_url: selfieUrl || undefined,
-          post_type: postType!,
-          pickup_location: formData.pickupLocation,
-          dropoff_location: formData.dropoffLocation,
-          departure_date: formData.departureDate,
-          departure_time: formData.departureTime,
-          vehicle: formData.vehicle,
-          vehicle_registration: formData.vehicleRegistration,
-          comments: formData.comments || undefined,
-        };
-
-    // Add passenger-specific fields
-    if (postType === 'passengers') {
-      rideData.seats_available = parseInt(formData.seatsAvailable) || undefined;
-      rideData.price_per_seat = parseFloat(formData.pricePerSeat) || undefined;
-    }
-
-    // Save to Supabase
-    try {
-      console.log('Submitting ride data:', rideData);
-      
-      const { data, error } = await supabase
-        .from('rides')
-        .insert([rideData])
-        .select();
-
-      if (error) {
-        console.error('Supabase error:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        
-        // More specific error messages
-        if (error.message?.includes('503') || error.message?.includes('Service Unavailable') || error.message?.includes('upstream connect error') || error.message?.includes('delayed connect error')) {
-          alert('Supabase connection error (503):\n\nThe Supabase project may be:\n1. Paused (free tier auto-pauses after 7 days)\n2. Temporarily unavailable\n3. Being restored\n\nPlease:\n1. Go to https://app.supabase.com/\n2. Check if project is paused → Click "Restore"\n3. Wait 2-3 minutes for it to become active\n4. Try again');
-        } else if (error.message?.includes('Failed to fetch') || error.message?.includes('network') || error.message?.includes('ERR_NAME_NOT_RESOLVED')) {
-          alert('Network error: Cannot connect to Supabase.\n\nPossible causes:\n1. No internet connection\n2. Supabase project is paused\n3. DNS/network issue\n\nPlease check:\n- Your internet connection\n- Supabase dashboard (make sure project is active)\n- Try refreshing the page');
-        } else if (error.code === 'PGRST116' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
-          alert('Database table "rides" not found.\n\nPlease create it in Supabase:\n1. Go to SQL Editor\n2. Run the SQL from SUPABASE_SETUP.md\n3. Create the "rides" table');
-        } else if (error.code === '42501' || error.message?.includes('permission')) {
-          alert('Permission denied. Please check Row Level Security (RLS) policies in Supabase.\n\nMake sure you have INSERT policy enabled for the "rides" table.');
-        } else if (error.code === '23505') {
-          alert('This ride already exists. Please check your details.');
-        } else {
-          alert(`Failed to post ride: ${error.message || 'Unknown error'}\n\nError code: ${error.code || 'N/A'}\n\nCheck browser console (F12) for more details.`);
-        }
-        setIsSubmitting(false);
-        return;
-      }
-
-      console.log('Ride posted successfully:', data);
-      setIsSubmitting(false);
-      alert('Ride posted successfully!');
-      
-      // Reset form
-      setPostType(null);
-      setSelfie(null);
-      setIsHumanVerified(false);
       setFormData({
         name: '',
         phoneNumber: '',
@@ -247,12 +50,150 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
         vehicleRegistration: '',
         comments: '',
       });
-      
+      setSelfie(null);
+      setIsHumanVerified(false);
+      setShowCamera(false);
+    }
+  }, [isOpen]);
+
+  // Camera handling
+  useEffect(() => {
+    if (showCamera && videoRef.current) {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+          }
+        })
+        .catch(err => {
+          console.error('Error accessing camera:', err);
+          alert('Could not access camera. Please allow camera permissions.');
+          setShowCamera(false);
+        });
+    }
+
+    return () => {
+      if (videoRef.current?.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [showCamera]);
+
+  const captureSelfie = () => {
+    if (videoRef.current && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0);
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        setSelfie(dataUrl);
+        setShowCamera(false);
+        setIsHumanVerified(true);
+        // Stop video stream
+        if (video.srcObject) {
+          const stream = video.srcObject as MediaStream;
+          stream.getTracks().forEach(track => track.stop());
+        }
+      }
+    }
+  };
+
+  const retakeSelfie = () => {
+    setSelfie(null);
+    setIsHumanVerified(false);
+    setShowCamera(true);
+  };
+
+  if (!isOpen) return null;
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!isHumanVerified || !selfie) {
+      alert('Please complete selfie verification');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Upload selfie to Supabase Storage
+      let selfieUrl = '';
+      try {
+        const selfieBlob = await fetch(selfie).then(r => r.blob());
+        const fileName = `selfies/${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('selfies')
+          .upload(fileName, selfieBlob, { contentType: 'image/jpeg' });
+
+        if (uploadError) throw uploadError;
+        
+        const { data: urlData } = supabase.storage
+          .from('selfies')
+          .getPublicUrl(fileName);
+        selfieUrl = urlData.publicUrl;
+      } catch (storageError) {
+        console.error('Storage error, using base64 fallback:', storageError);
+        // Fallback: store as base64 in database (not ideal but works)
+        selfieUrl = selfie;
+      }
+
+      // Prepare ride data
+      const rideData: RidePost = {
+        ride_type: rideType,
+        post_type: postType!,
+        pickup_location: formData.pickupLocation,
+        dropoff_location: formData.dropoffLocation,
+        departure_date: formData.departureDate,
+        departure_time: formData.departureTime,
+        seats_available: postType === 'passengers' && formData.seatsAvailable ? parseInt(formData.seatsAvailable) : undefined,
+        price_per_seat: rideType === 'offer' && postType === 'passengers' && formData.pricePerSeat ? parseFloat(formData.pricePerSeat) : undefined,
+        vehicle: rideType === 'offer' ? formData.vehicle : undefined,
+        vehicle_registration: rideType === 'offer' ? formData.vehicleRegistration : undefined,
+        comments: formData.comments || undefined,
+        driver_name: formData.name,
+        phone_number: formData.phoneNumber,
+        is_whatsapp: formData.isWhatsApp,
+        selfie_url: selfieUrl,
+      };
+
+      // Insert into Supabase
+      const { error } = await supabase
+        .from('rides')
+        .insert([rideData]);
+
+      if (error) {
+        console.error('Error posting ride:', error);
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          alert('Network error. Please check your internet connection and try again.');
+        } else if (error.message.includes('permission') || error.message.includes('RLS')) {
+          alert('Permission denied. Please check your database permissions.');
+        } else {
+          alert(`Failed to post ride: ${error.message}`);
+        }
+        setIsSubmitting(false);
+        return;
+      }
+
+      alert('Ride posted successfully!');
+      onSuccess?.();
       onClose();
     } catch (error: any) {
-      console.error('Unexpected error:', error);
-      console.error('Error stack:', error?.stack);
-      alert(`Failed to post ride: ${error?.message || 'Unknown error'}\n\nCheck browser console (F12) for more details.`);
+      console.error('Error:', error);
+      alert(`Failed to post ride: ${error.message || 'Unknown error'}`);
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -270,7 +211,9 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
         <div className="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-            <h2 className="text-2xl font-bold text-gray-900">Post a Ride</h2>
+            <h2 className="text-2xl font-bold text-gray-900">
+              {rideType === 'offer' ? 'Post a Ride' : 'Request a Ride'}
+            </h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -324,15 +267,15 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
                   </button>
                   <span className="text-gray-400">|</span>
                   <span className="text-sm text-gray-600">
-                    Posting: <span className="font-semibold capitalize">{postType}</span>
+                    {rideType === 'offer' ? 'Posting' : 'Requesting'}: <span className="font-semibold capitalize">{postType}</span>
                   </span>
                 </div>
 
-                {/* Name Field */}
+                {/* Name */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                    <Users size={16} className="text-emerald-600" />
-                    Your Full Name *
+                    <User size={16} className="text-emerald-600" />
+                    Your Name
                   </label>
                   <input
                     type="text"
@@ -345,135 +288,98 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
                   />
                 </div>
 
-                {/* Phone Number Field */}
+                {/* Phone Number */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                     <Phone size={16} className="text-emerald-600" />
-                    Phone Number *
+                    Phone Number
                   </label>
                   <input
                     type="tel"
                     name="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={handleInputChange}
-                    placeholder="e.g., +27 82 123 4567 or 082 123 4567"
+                    placeholder="e.g., 0821234567"
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                   />
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isWhatsApp"
+                      name="isWhatsApp"
+                      checked={formData.isWhatsApp}
+                      onChange={(e) => setFormData(prev => ({ ...prev, isWhatsApp: e.target.checked }))}
+                      className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                    />
+                    <label htmlFor="isWhatsApp" className="text-sm text-gray-600">
+                      This number is on WhatsApp
+                    </label>
+                  </div>
                 </div>
 
-                {/* WhatsApp Checkbox */}
-                <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
-                  <input
-                    type="checkbox"
-                    id="isWhatsApp"
-                    name="isWhatsApp"
-                    checked={formData.isWhatsApp}
-                    onChange={(e) => setFormData(prev => ({ ...prev, isWhatsApp: e.target.checked }))}
-                    className="h-5 w-5 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="isWhatsApp" className="text-sm font-semibold text-gray-700 flex items-center gap-2 cursor-pointer">
-                    <MessageSquare size={18} className="text-emerald-600" />
-                    This number is on WhatsApp
-                  </label>
-                </div>
-
-                {/* Selfie Capture */}
+                {/* Selfie Verification */}
                 <div>
                   <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                     <Camera size={16} className="text-emerald-600" />
-                    Selfie Verification *
+                    Selfie Verification
                   </label>
-                  
                   {!selfie && !showCamera && (
                     <button
                       type="button"
-                      onClick={startCamera}
-                      className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2 text-gray-700"
+                      onClick={() => setShowCamera(true)}
+                      className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 transition-all text-gray-600"
                     >
-                      <Camera size={20} />
-                      Take Selfie
+                      Click to take a selfie
                     </button>
                   )}
-
                   {showCamera && (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       <div className="relative bg-black rounded-lg overflow-hidden">
                         <video
                           ref={videoRef}
                           autoPlay
                           playsInline
-                          className="w-full h-auto max-h-64"
+                          className="w-full h-64 object-cover"
                         />
-                        <canvas ref={canvasRef} className="hidden" />
-                      </div>
-                      <div className="flex gap-3">
-                        <button
-                          type="button"
-                          onClick={captureSelfie}
-                          className="flex-1 bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-700 transition-colors"
-                        >
-                          Capture
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            stopCamera();
-                            setShowCamera(false);
-                          }}
-                          className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-400 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {selfie && (
-                    <div className="space-y-3">
-                      <div className="relative bg-gray-100 rounded-lg overflow-hidden">
-                        <img
-                          src={selfie}
-                          alt="Selfie verification"
-                          className="w-full h-auto max-h-64 object-contain mx-auto"
+                        <canvas
+                          ref={canvasRef}
+                          className="hidden"
                         />
                       </div>
                       <button
                         type="button"
-                        onClick={retakeSelfie}
-                        className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                        onClick={captureSelfie}
+                        className="w-full px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors"
                       >
-                        Retake Selfie
+                        Capture
                       </button>
                     </div>
                   )}
-                  
-                  <p className="text-xs text-gray-500 mt-2">
-                    This helps us verify your identity and keep our community safe.
-                  </p>
-                </div>
-
-                {/* Human Verification */}
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <label className="flex items-start gap-3 cursor-pointer">
+                  {selfie && (
+                    <div className="space-y-2">
+                      <img src={selfie} alt="Selfie" className="w-full h-64 object-cover rounded-lg border-2 border-emerald-500" />
+                      <button
+                        type="button"
+                        onClick={retakeSelfie}
+                        className="w-full px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+                      >
+                        Retake
+                      </button>
+                    </div>
+                  )}
+                  <div className="mt-2 flex items-center gap-2">
                     <input
                       type="checkbox"
+                      id="isHumanVerified"
                       checked={isHumanVerified}
-                      onChange={handleHumanVerification}
-                      className="mt-1 w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                      onChange={(e) => setIsHumanVerified(e.target.checked)}
+                      className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
                     />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CheckCircle size={18} className={isHumanVerified ? "text-emerald-600" : "text-gray-400"} />
-                        <span className="font-semibold text-gray-900">
-                          I verify that I am a human *
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600">
-                        By checking this box, you confirm that you are a real person and not a bot.
-                      </p>
-                    </div>
-                  </label>
+                    <label htmlFor="isHumanVerified" className="text-sm text-gray-600">
+                      I confirm this is a real person (human verification)
+                    </label>
+                  </div>
                 </div>
 
                 {/* Pickup Location */}
@@ -548,18 +454,18 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
                 {postType === 'passengers' && (
                   <>
                     <div className="grid md:grid-cols-2 gap-4">
-                      {/* Seats Available */}
+                      {/* Seats Available/Needed */}
                       <div>
                         <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
                           <Users size={16} className="text-emerald-600" />
-                          Seats Available
+                          {rideType === 'offer' ? 'Seats Available' : 'Seats Needed'}
                         </label>
                         <input
                           type="number"
                           name="seatsAvailable"
                           value={formData.seatsAvailable}
                           onChange={handleInputChange}
-                          placeholder="e.g., 3"
+                          placeholder={rideType === 'offer' ? 'e.g., 3' : 'e.g., 2'}
                           min="1"
                           max="10"
                           required={postType === 'passengers'}
@@ -567,62 +473,68 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
                         />
                       </div>
 
-                      {/* Price Per Seat */}
-                      <div>
-                        <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                          <DollarSign size={16} className="text-emerald-600" />
-                          Price Per Seat (R)
-                        </label>
-                        <input
-                          type="number"
-                          name="pricePerSeat"
-                          value={formData.pricePerSeat}
-                          onChange={handleInputChange}
-                          placeholder="e.g., 250"
-                          min="0"
-                          step="0.01"
-                          required={postType === 'passengers'}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                        />
-                      </div>
+                      {/* Price Per Seat (only for offers) */}
+                      {rideType === 'offer' && (
+                        <div>
+                          <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                            <DollarSign size={16} className="text-emerald-600" />
+                            Price Per Seat (R)
+                          </label>
+                          <input
+                            type="number"
+                            name="pricePerSeat"
+                            value={formData.pricePerSeat}
+                            onChange={handleInputChange}
+                            placeholder="e.g., 250"
+                            min="0"
+                            step="0.01"
+                            required={postType === 'passengers'}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                          />
+                        </div>
+                      )}
                     </div>
                   </>
                 )}
 
-                {/* Vehicle */}
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                    <Car size={16} className="text-emerald-600" />
-                    Vehicle (Car Model)
-                  </label>
-                  <input
-                    type="text"
-                    name="vehicle"
-                    value={formData.vehicle}
-                    onChange={handleInputChange}
-                    placeholder="e.g., Toyota Corolla 2020"
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                  />
-                </div>
+                {/* Vehicle (only for offers) */}
+                {rideType === 'offer' && (
+                  <>
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                        <Car size={16} className="text-emerald-600" />
+                        Vehicle (Car Model)
+                      </label>
+                      <input
+                        type="text"
+                        name="vehicle"
+                        value={formData.vehicle}
+                        onChange={handleInputChange}
+                        placeholder="e.g., Toyota Corolla 2020"
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                      />
+                    </div>
 
-                {/* Vehicle Registration */}
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                    <FileText size={16} className="text-emerald-600" />
-                    Vehicle Registration Number
-                  </label>
-                  <input
-                    type="text"
-                    name="vehicleRegistration"
-                    value={formData.vehicleRegistration}
-                    onChange={handleInputChange}
-                    placeholder="e.g., ABC 123 GP"
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all uppercase"
-                    style={{ textTransform: 'uppercase' }}
-                  />
-                </div>
+                    {/* Vehicle Registration */}
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                        <FileText size={16} className="text-emerald-600" />
+                        Vehicle Registration Number
+                      </label>
+                      <input
+                        type="text"
+                        name="vehicleRegistration"
+                        value={formData.vehicleRegistration}
+                        onChange={handleInputChange}
+                        placeholder="e.g., ABC 123 GP"
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all uppercase"
+                        style={{ textTransform: 'uppercase' }}
+                      />
+                    </div>
+                  </>
+                )}
 
                 {/* Comments */}
                 <div>
@@ -652,16 +564,9 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="flex-1 px-6 py-3 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                        Posting...
-                      </>
-                    ) : (
-                      'Post Ride'
-                    )}
+                    {isSubmitting ? 'Posting...' : rideType === 'offer' ? 'Post Ride' : 'Request Ride'}
                   </button>
                 </div>
               </>

@@ -4,7 +4,7 @@ import Hero from './components/Hero';
 import Features from './components/Features';
 import HowItWorks from './components/HowItWorks';
 import Safety from './components/Safety';
-// import Pricing from './components/Pricing';
+import Pricing from './components/Pricing';
 import CTA from './components/CTA';
 import Footer from './components/Footer';
 import PostRideForm from './components/PostRideForm';
@@ -21,9 +21,8 @@ function App() {
     }
   };
 
-  const handleRidePosted = () => {
-    setIsPostRideFormOpen(false);
-    setRefreshRides(prev => prev + 1); // Trigger refresh
+  const handlePostRideSuccess = () => {
+    setRefreshRides(prev => prev + 1);
   };
 
   return (
@@ -38,7 +37,6 @@ function App() {
         <Features />
         <HowItWorks />
         <Safety />
-        {/* <Pricing /> */}
         <CTA 
           onPostRide={() => setIsPostRideFormOpen(true)}
           onFindRide={scrollToFindRide}
@@ -47,7 +45,9 @@ function App() {
       <Footer />
       <PostRideForm 
         isOpen={isPostRideFormOpen} 
-        onClose={handleRidePosted}
+        onClose={() => setIsPostRideFormOpen(false)}
+        rideType="offer"
+        onSuccess={handlePostRideSuccess}
       />
     </div>
   );
