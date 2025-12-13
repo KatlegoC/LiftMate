@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { X, MapPin, Calendar, Clock, Users, DollarSign, Car, FileText, MessageSquare } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, MapPin, Calendar, Clock, Users, DollarSign, Car, FileText, MessageSquare, Camera, CheckCircle } from 'lucide-react';
 
 interface PostRideFormProps {
   isOpen: boolean;
@@ -9,6 +9,7 @@ interface PostRideFormProps {
 export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) => {
   const [postType, setPostType] = useState<'passengers' | 'parcel' | null>(null);
   const [formData, setFormData] = useState({
+    name: '',
     pickupLocation: '',
     dropoffLocation: '',
     departureDate: '',
@@ -19,13 +20,75 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
     vehicleRegistration: '',
     comments: '',
   });
+  const [selfie, setSelfie] = useState<string | null>(null);
+  const [isHumanVerified, setIsHumanVerified] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Reset form when modal closes
   useEffect(() => {
     if (!isOpen) {
       setPostType(null);
+      setSelfie(null);
+      setIsHumanVerified(false);
+      setShowCamera(false);
+      stopCamera();
     }
   }, [isOpen]);
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user' } 
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setShowCamera(true);
+    } catch (error) {
+      alert('Unable to access camera. Please allow camera permissions.');
+      console.error('Camera error:', error);
+    }
+  };
+
+  const captureSelfie = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
+      
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context?.drawImage(video, 0, 0);
+      
+      const imageData = canvas.toDataURL('image/jpeg');
+      setSelfie(imageData);
+      stopCamera();
+      setShowCamera(false);
+    }
+  };
+
+  const retakeSelfie = () => {
+    setSelfie(null);
+    startCamera();
+  };
 
   if (!isOpen) return null;
 
@@ -37,10 +100,37 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
     }));
   };
 
+  const handleHumanVerification = () => {
+    setIsHumanVerified(!isHumanVerified);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.name.trim()) {
+      alert('Please enter your name');
+      return;
+    }
+    
+    if (!selfie) {
+      alert('Please take a selfie for verification');
+      return;
+    }
+    
+    if (!isHumanVerified) {
+      alert('Please verify that you are human');
+      return;
+    }
+    
     // Handle form submission here
-    console.log('Form submitted:', { postType, ...formData });
+    const { name, ...restFormData } = formData;
+    console.log('Form submitted:', { 
+      postType, 
+      driverName: name,
+      selfie: selfie.substring(0, 50) + '...', // Log preview only
+      humanVerified: isHumanVerified,
+      ...restFormData 
+    });
     alert('Ride posted successfully!');
     onClose();
   };
@@ -114,6 +204,121 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) =
                   <span className="text-sm text-gray-600">
                     Posting: <span className="font-semibold capitalize">{postType}</span>
                   </span>
+                </div>
+
+                {/* Name Field */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                    <Users size={16} className="text-emerald-600" />
+                    Your Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    placeholder="e.g., John Doe"
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                  />
+                </div>
+
+                {/* Selfie Capture */}
+                <div>
+                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                    <Camera size={16} className="text-emerald-600" />
+                    Selfie Verification *
+                  </label>
+                  
+                  {!selfie && !showCamera && (
+                    <button
+                      type="button"
+                      onClick={startCamera}
+                      className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2 text-gray-700"
+                    >
+                      <Camera size={20} />
+                      Take Selfie
+                    </button>
+                  )}
+
+                  {showCamera && (
+                    <div className="space-y-3">
+                      <div className="relative bg-black rounded-lg overflow-hidden">
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          className="w-full h-auto max-h-64"
+                        />
+                        <canvas ref={canvasRef} className="hidden" />
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={captureSelfie}
+                          className="flex-1 bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-emerald-700 transition-colors"
+                        >
+                          Capture
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            stopCamera();
+                            setShowCamera(false);
+                          }}
+                          className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-400 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {selfie && (
+                    <div className="space-y-3">
+                      <div className="relative bg-gray-100 rounded-lg overflow-hidden">
+                        <img
+                          src={selfie}
+                          alt="Selfie verification"
+                          className="w-full h-auto max-h-64 object-contain mx-auto"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={retakeSelfie}
+                        className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+                      >
+                        Retake Selfie
+                      </button>
+                    </div>
+                  )}
+                  
+                  <p className="text-xs text-gray-500 mt-2">
+                    This helps us verify your identity and keep our community safe.
+                  </p>
+                </div>
+
+                {/* Human Verification */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isHumanVerified}
+                      onChange={handleHumanVerification}
+                      className="mt-1 w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CheckCircle size={18} className={isHumanVerified ? "text-emerald-600" : "text-gray-400"} />
+                        <span className="font-semibold text-gray-900">
+                          I verify that I am a human *
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        By checking this box, you confirm that you are a real person and not a bot.
+                      </p>
+                    </div>
+                  </label>
                 </div>
 
                 {/* Pickup Location */}
