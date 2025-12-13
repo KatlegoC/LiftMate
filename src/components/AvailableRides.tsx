@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MapPin, Calendar, Clock, Users, DollarSign, Car, Search, Filter } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Calendar, Clock, Users, Car, Search, Filter } from 'lucide-react';
 
 interface Ride {
   id: string;

@@ -39,9 +39,9 @@ export const useFacebookAuth = (appId: string): UseFacebookAuthReturn => {
 
     const fetchUserInfo = () => {
       if (window.FB) {
-        window.FB.api('/me', { fields: 'id,name,email,picture' }, (response: FacebookUser) => {
-          if (response && !response.error) {
-            setUser(response);
+        window.FB.api('/me', { fields: 'id,name,email,picture' }, (response: FacebookUser | { error?: any }) => {
+          if (response && !('error' in response)) {
+            setUser(response as FacebookUser);
           }
         });
       }
@@ -100,9 +100,9 @@ export const useFacebookAuth = (appId: string): UseFacebookAuthReturn => {
       window.FB.login((response: any) => {
         if (response.authResponse) {
           setIsAuthenticated(true);
-          window.FB.api('/me', { fields: 'id,name,email,picture' }, (userResponse: FacebookUser) => {
-            if (userResponse && !userResponse.error) {
-              setUser(userResponse);
+          window.FB.api('/me', { fields: 'id,name,email,picture' }, (userResponse: FacebookUser | { error?: any }) => {
+            if (userResponse && !('error' in userResponse)) {
+              setUser(userResponse as FacebookUser);
             }
           });
           resolve();

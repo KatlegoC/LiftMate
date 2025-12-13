@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { X, MapPin, Calendar, Clock, Users, DollarSign, Car, FileText, MessageSquare, Facebook, LogOut } from 'lucide-react';
 import { useFacebookAuth } from '../hooks/useFacebookAuth';
 
@@ -9,7 +9,7 @@ interface PostRideFormProps {
 
 // Facebook App ID - Replace with your actual App ID from https://developers.facebook.com/
 // For development, you can use a test app ID or set it via environment variable
-const FACEBOOK_APP_ID = import.meta.env.VITE_FACEBOOK_APP_ID || 'YOUR_FACEBOOK_APP_ID';
+const FACEBOOK_APP_ID: string = (import.meta.env.VITE_FACEBOOK_APP_ID as string) || 'YOUR_FACEBOOK_APP_ID';
 
 export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose }) => {
   const { isAuthenticated, user, isLoading, login, logout } = useFacebookAuth(FACEBOOK_APP_ID);
