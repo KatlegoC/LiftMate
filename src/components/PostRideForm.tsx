@@ -134,7 +134,7 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose, rid
       try {
         const selfieBlob = await fetch(selfie).then(r => r.blob());
         const fileName = `selfies/${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('selfies')
           .upload(fileName, selfieBlob, { contentType: 'image/jpeg' });
 

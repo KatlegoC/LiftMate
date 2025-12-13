@@ -8,11 +8,10 @@ interface Ride extends RidePost {
 }
 
 interface AvailableRidesProps {
-  onPostRideRequest?: () => void;
   refreshTrigger?: number;
 }
 
-export const AvailableRides: React.FC<AvailableRidesProps> = ({ onPostRideRequest, refreshTrigger }) => {
+export const AvailableRides: React.FC<AvailableRidesProps> = ({ refreshTrigger }) => {
   const [rides, setRides] = useState<Ride[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'passengers' | 'parcel'>('all');
