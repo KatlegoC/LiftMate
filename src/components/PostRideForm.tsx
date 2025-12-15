@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, MapPin, Calendar, Clock, Users, DollarSign, Car, FileText, MessageSquare, User, Phone, Camera } from 'lucide-react';
+import { X, MapPin, Calendar, Clock, Users, DollarSign, Car, FileText, MessageSquare, User, Phone, Camera, ShieldCheck } from 'lucide-react';
 import { supabase, RidePost } from '../lib/supabase';
 
 interface PostRideFormProps {
@@ -16,7 +16,9 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose, rid
     phoneNumber: '',
     isWhatsApp: false,
     pickupLocation: '',
+    pickupArea: '',
     dropoffLocation: '',
+    dropoffArea: '',
     departureDate: '',
     departureTime: '',
     seatsAvailable: '',
@@ -29,6 +31,7 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose, rid
   const [selfie, setSelfie] = useState<string | null>(null);
   const [isHumanVerified, setIsHumanVerified] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -41,7 +44,9 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose, rid
         phoneNumber: '',
         isWhatsApp: false,
         pickupLocation: '',
+        pickupArea: '',
         dropoffLocation: '',
+        dropoffArea: '',
         departureDate: '',
         departureTime: '',
         seatsAvailable: '',
@@ -53,6 +58,7 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose, rid
       setSelfie(null);
       setIsHumanVerified(false);
       setShowCamera(false);
+      setHasAcceptedTerms(false);
     }
   }, [isOpen]);
 
@@ -126,6 +132,11 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose, rid
       return;
     }
 
+    if (!hasAcceptedTerms) {
+      alert('Please accept the LiftMate Terms of Service and Community Guidelines before posting.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -155,7 +166,9 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose, rid
         ride_type: rideType,
         post_type: postType!,
         pickup_location: formData.pickupLocation,
+        pickup_area: formData.pickupArea || undefined,
         dropoff_location: formData.dropoffLocation,
+        dropoff_area: formData.dropoffArea || undefined,
         departure_date: formData.departureDate,
         departure_time: formData.departureTime,
         seats_available: postType === 'passengers' && formData.seatsAvailable ? parseInt(formData.seatsAvailable) : undefined,
@@ -383,37 +396,96 @@ export const PostRideForm: React.FC<PostRideFormProps> = ({ isOpen, onClose, rid
                 </div>
 
                 {/* Pickup Location */}
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                    <MapPin size={16} className="text-emerald-600" />
-                    Pickup Location
-                  </label>
-                  <input
-                    type="text"
-                    name="pickupLocation"
-                    value={formData.pickupLocation}
-                    onChange={handleInputChange}
-                    placeholder="e.g., Johannesburg, Gauteng"
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                  />
+                <div className="space-y-3">
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                      <MapPin size={16} className="text-emerald-600" />
+                      Pickup City / Town
+                    </label>
+                    <input
+                      type="text"
+                      name="pickupLocation"
+                      value={formData.pickupLocation}
+                      onChange={handleInputChange}
+                      placeholder="e.g., Pretoria, Gauteng"
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                      Area / Suburb (optional)
+                    </label>
+                    <input
+                      type="text"
+                      name="pickupArea"
+                      value={formData.pickupArea}
+                      onChange={handleInputChange}
+                      placeholder="e.g., Pretoria Central"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Terms and Conditions */}
+                <div className="mt-4 border-t border-gray-200 pt-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1">
+                      <ShieldCheck size={18} className="text-emerald-600" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="mt-1 w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                          checked={hasAcceptedTerms}
+                          onChange={(e) => setHasAcceptedTerms(e.target.checked)}
+                        />
+                        <span>
+                          I have read and agree to the{' '}
+                          <a
+                            href="/terms"
+                            className="text-emerald-600 font-semibold underline underline-offset-2"
+                          >
+                            LiftMate Terms of Service and Community Guidelines
+                          </a>
+                          .
+                        </span>
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Dropoff Location */}
-                <div>
-                  <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
-                    <MapPin size={16} className="text-emerald-600" />
-                    Dropoff Location
-                  </label>
-                  <input
-                    type="text"
-                    name="dropoffLocation"
-                    value={formData.dropoffLocation}
-                    onChange={handleInputChange}
-                    placeholder="e.g., Cape Town, Western Cape"
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
-                  />
+                <div className="space-y-3">
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-2">
+                      <MapPin size={16} className="text-emerald-600" />
+                      Dropoff City / Town
+                    </label>
+                    <input
+                      type="text"
+                      name="dropoffLocation"
+                      value={formData.dropoffLocation}
+                      onChange={handleInputChange}
+                      placeholder="e.g., Cape Town, Western Cape"
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                      Area / Suburb (optional)
+                    </label>
+                    <input
+                      type="text"
+                      name="dropoffArea"
+                      value={formData.dropoffArea}
+                      onChange={handleInputChange}
+                      placeholder="e.g., Waterfront"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-sm"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-4">

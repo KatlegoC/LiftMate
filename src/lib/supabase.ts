@@ -11,7 +11,9 @@ export interface RidePost {
   ride_type: 'offer' | 'request'; // 'offer' = driver offering ride, 'request' = rider looking for ride
   post_type: 'passengers' | 'parcel';
   pickup_location: string;
+  pickup_area?: string; // e.g. Central, Hatfield
   dropoff_location: string;
+  dropoff_area?: string; // e.g. CBD, Waterfront
   departure_date: string;
   departure_time: string;
   seats_available?: number;

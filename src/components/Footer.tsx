@@ -67,11 +67,6 @@ export const Footer: React.FC = () => {
                   Safety
                 </a>
               </li>
-              <li>
-                <a href="#pricing" className="hover:text-emerald-500 transition-colors">
-                  Pricing
-                </a>
-              </li>
             </ul>
           </div>
 
@@ -80,24 +75,18 @@ export const Footer: React.FC = () => {
             <h3 className="text-white font-semibold mb-4">Support</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#" className="hover:text-emerald-500 transition-colors">
-                  Help Center
+                <span className="text-gray-400">Help Center (coming soon)</span>
+              </li>
+              <li>
+                <span className="text-gray-400">Safety Tips (coming soon)</span>
+              </li>
+              <li>
+                <a href="#safety" className="hover:text-emerald-500 transition-colors">
+                  Safety & Community Guidelines
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:text-emerald-500 transition-colors">
-                  Safety Tips
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-emerald-500 transition-colors">
-                  Community Guidelines
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-emerald-500 transition-colors">
-                  Contact Us
-                </a>
+                <span className="text-gray-400">Contact Us (coming soon)</span>
               </li>
             </ul>
           </div>
@@ -127,15 +116,11 @@ export const Footer: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-center text-sm">
             <p>© 2024 LiftMate. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
-              <a href="#" className="hover:text-emerald-500 transition-colors">
-                Privacy Policy
+              <span className="text-gray-500">Privacy Policy (coming soon)</span>
+              <a href="/terms" className="hover:text-emerald-500 transition-colors">
+                Terms of Use
               </a>
-              <a href="#" className="hover:text-emerald-500 transition-colors">
-                Terms of Service
-              </a>
-              <a href="#" className="hover:text-emerald-500 transition-colors">
-                Cookie Policy
-              </a>
+              <span className="text-gray-500">Cookie Policy (coming soon)</span>
             </div>
           </div>
         </div>

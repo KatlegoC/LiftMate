@@ -4,8 +4,8 @@ import {
   DollarSign,
   Star,
   MessageSquare,
-  Package,
   Calendar,
+  Search,
 } from 'lucide-react';
 
 interface Feature {
@@ -16,14 +16,21 @@ interface Feature {
 
 const features: Feature[] = [
   {
+    icon: <Search className="w-8 h-8" />,
+    title: 'Easy Trip Discovery',
+    description:
+      'Scroll through available trips by route, date, and price — no endless Facebook posts, comments, or screenshots.',
+  },
+  {
     icon: <ShieldCheck size={32} />,
     title: 'Verified Drivers',
     description: 'All drivers undergo background checks and verification to ensure your safety.',
   },
   {
     icon: <DollarSign size={32} />,
-    title: 'Affordable Travel',
-    description: 'Share costs with fellow travelers and save up to 70% compared to solo trips.',
+    title: 'Clear Pricing & Availability',
+    description:
+      'See clear, affordable prices upfront and share travel costs without negotiating in comments or inboxes. Save up to 70% compared to solo trips.',
   },
   {
     icon: <Star size={32} />,
@@ -33,12 +40,7 @@ const features: Feature[] = [
   {
     icon: <MessageSquare size={32} />,
     title: 'In-App Messaging',
-    description: 'Communicate directly with drivers and riders before your journey.',
-  },
-  {
-    icon: <Package size={32} />,
-    title: 'Premium Packages',
-    description: 'Send and receive packages safely with our verified delivery network.',
+    description: 'Connect directly with drivers and riders via WhatsApp to confirm details before your journey.',
   },
   {
     icon: <Calendar size={32} />,
@@ -53,10 +55,10 @@ export const Features: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Why Choose LiftMate?
+            Why Move from Facebook to LiftMate?
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Everything you need for safe, affordable, and convenient travel across South Africa.
+            All the convenience of Facebook lift groups — without the chaos. Find, compare, and book trips safely in one place.
           </p>
         </div>
 

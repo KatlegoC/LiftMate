@@ -9,11 +9,11 @@ export const Header: React.FC = () => {
     <header className="bg-white shadow-md sticky top-0 z-50">
       <nav className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center space-x-3">
+          {/* Logo - click to go home */}
+          <a href="/" className="flex items-center space-x-3">
             <LiftMateLogo size={40} />
             <span className="text-2xl font-bold text-emerald-600">LiftMate</span>
-          </div>
+          </a>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">

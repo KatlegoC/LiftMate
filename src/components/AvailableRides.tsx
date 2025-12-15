@@ -77,13 +77,21 @@ export const AvailableRides: React.FC<AvailableRidesProps> = ({ refreshTrigger }
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        ride =>
-          ride.pickup_location.toLowerCase().includes(query) ||
-          ride.dropoff_location.toLowerCase().includes(query) ||
+      filtered = filtered.filter(ride => {
+        const pickupDisplay = ride.pickup_area
+          ? `${ride.pickup_location} - ${ride.pickup_area}`
+          : ride.pickup_location;
+        const dropoffDisplay = ride.dropoff_area
+          ? `${ride.dropoff_location} - ${ride.dropoff_area}`
+          : ride.dropoff_location;
+
+        return (
+          pickupDisplay.toLowerCase().includes(query) ||
+          dropoffDisplay.toLowerCase().includes(query) ||
           (ride.vehicle && ride.vehicle.toLowerCase().includes(query)) ||
           ride.driver_name.toLowerCase().includes(query)
-      );
+        );
+      });
     }
 
     setFilteredRides(filtered);
@@ -299,11 +307,17 @@ export const AvailableRides: React.FC<AvailableRidesProps> = ({ refreshTrigger }
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 text-gray-900">
                             <MapPin size={18} className="text-emerald-600 flex-shrink-0" />
-                            <span className="font-semibold">{ride.pickup_location}</span>
+                            <span className="font-semibold">
+                              {ride.pickup_location}
+                              {ride.pickup_area ? ` - ${ride.pickup_area}` : ''}
+                            </span>
                           </div>
                           <div className="flex items-center gap-2 text-gray-600 ml-5">
                             <span className="text-emerald-600">↓</span>
-                            <span>{ride.dropoff_location}</span>
+                            <span>
+                              {ride.dropoff_location}
+                              {ride.dropoff_area ? ` - ${ride.dropoff_area}` : ''}
+                            </span>
                           </div>
                         </div>
                       </div>
