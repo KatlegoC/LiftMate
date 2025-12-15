@@ -20,22 +20,14 @@ export const LiftMateLogo: React.FC<LiftMateLogoProps> = ({
     >
       {/* Circular background */}
       <circle cx="24" cy="24" r="24" fill="#10B981" />
-      
-      {/* Person 1 (left) */}
-      <circle cx="14" cy="20" r="4" fill="white" />
-      <rect x="12" y="24" width="4" height="6" fill="white" />
-      
-      {/* Person 2 (right) */}
-      <circle cx="34" cy="20" r="4" fill="white" />
-      <rect x="32" y="24" width="4" height="6" fill="white" />
-      
-      {/* Connecting path/road */}
+
+      {/* Thumbs-up icon */}
+      {/* Wrist */}
+      <rect x="14" y="22" width="6" height="10" rx="2" fill="white" />
+      {/* Thumb and hand */}
       <path
-        d="M 18 24 Q 24 18 30 24"
-        stroke="white"
-        strokeWidth="2.5"
-        fill="none"
-        strokeLinecap="round"
+        d="M20 30h9c1.38 0 2.5-1.12 2.5-2.5v-7c0-1.38-1.12-2.5-2.5-2.5h-4.3l0.7-3.1c0.35-1.53-0.63-3.04-2.16-3.39-0.97-0.22-1.99 0.16-2.58 0.96L17 17.5V28c0 1.1 0.9 2 2 2z"
+        fill="white"
       />
     </svg>
   );
