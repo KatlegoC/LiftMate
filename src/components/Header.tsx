@@ -26,15 +26,12 @@ export const Header: React.FC = () => {
             <a href="#safety" className="text-gray-700 hover:text-emerald-600 transition-colors">
               Safety
             </a>
-            <a href="#pricing" className="text-gray-700 hover:text-emerald-600 transition-colors">
-              Pricing
-            </a>
-            <button className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors">
-              Sign In
-            </button>
-            <button className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors">
+            <a
+              href="#find-ride"
+              className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
+            >
               Get Started
-            </button>
+            </a>
           </div>
 
           {/* Mobile Menu Button */}
@@ -72,20 +69,12 @@ export const Header: React.FC = () => {
               Safety
             </a>
             <a
-              href="#pricing"
-              className="block text-gray-700 hover:text-emerald-600 transition-colors"
+              href="#find-ride"
+              className="block bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors w-full text-center"
               onClick={() => setIsMenuOpen(false)}
             >
-              Pricing
+              Get Started
             </a>
-            <div className="flex flex-col space-y-2 pt-2">
-              <button className="bg-emerald-500 text-white px-6 py-2 rounded-lg hover:bg-emerald-600 transition-colors w-full">
-                Sign In
-              </button>
-              <button className="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition-colors w-full">
-                Get Started
-              </button>
-            </div>
           </div>
         )}
       </nav>
